@@ -10,7 +10,7 @@ import cv2
 from tensorflow.keras import models
 from .config import Config
 
-# --- CUSTOM OBJECTS ---
+# --- CUSTOM OBJECTS (Segmentasyon için gerekli) ---
 @tf.keras.utils.register_keras_serializable()
 class SmoothTruncatedLoss(tf.keras.losses.Loss):
     def __init__(self, gamma=0.2, name="smooth_truncated_loss", **kwargs):
@@ -49,9 +49,11 @@ class InferenceEngine:
         print(f"Loading models from: {Config.MODEL_DIR}")
         
         try:
+            # Sınıflandırma Modeli Yükleme
             if not os.path.exists(Config.CLS_MODEL_PATH): return False
             self.classifier = tf.keras.models.load_model(Config.CLS_MODEL_PATH, compile=False)
             
+            # Segmentasyon Modeli Yükleme
             if not os.path.exists(Config.SEG_MODEL_PATH): return False
             custom_objects = {
                 'SmoothTruncatedLoss': SmoothTruncatedLoss,
@@ -67,261 +69,139 @@ class InferenceEngine:
 
     def predict_classification(self, img):
         if self.classifier is None: raise RuntimeError("Classifier not loaded!")
+        
+        # Görüntüyü yeniden boyutlandır
         img_resized = cv2.resize(img, Config.IMG_SIZE)
-        img_tensor = np.expand_dims(img_resized.astype(np.float32) / 255.0, axis=0)
+        
+        # KRITİK GÜNCELLEME: EfficientNetV2 'include_preprocessing=True' ile eğitildiği için
+        # manuel olarak 255'e bölmüyoruz (0-1 arası yapmıyoruz). Model 0-255 arası bekliyor.
+        img_tensor = np.expand_dims(img_resized.astype(np.float32), axis=0)
+        
         preds = self.classifier.predict(img_tensor, verbose=0)
         return np.argmax(preds), np.max(preds), img_tensor
 
     def predict_segmentation(self, img):
         if self.segmenter is None: raise RuntimeError("Segmenter not loaded!")
         
-        # --- BOYUT HATASI İÇİN DÜZELTME ---
-        # Model sabit 224x224 giriş bekliyor.
-        # Görüntüyü ne olursa olsun 224x224 yapıyoruz.
         h_orig, w_orig, _ = img.shape
         
+        # Segmentasyon için 224x224
         img_resized = cv2.resize(img, (224, 224))
+        # CIA-Net (U-Net türevi) genelde 0-1 arası bekler (DenseNet backbone preprocess'ine bağlı ama standart olarak normalize edelim)
         img_tensor = np.expand_dims(img_resized.astype(np.float32) / 255.0, axis=0)
         
         preds = self.segmenter.predict(img_tensor, verbose=0)
         
-        # Çıktıları al (Nuclei ve Contour)
         nuc_prob = preds[0][0, :, :, 0]
         con_prob = preds[1][0, :, :, 0]
         
-        # Segmentasyon Güven Skoru
-        # Sadece hücre olduğunu düşündüğü (>0.5) piksellerin ortalamasını al
         mask_indices = nuc_prob > 0.5
         if np.any(mask_indices):
             seg_confidence = np.mean(nuc_prob[mask_indices])
         else:
             seg_confidence = 0.0
         
-        # Çıktıyı orijinal boyuta geri büyüt (Görselleştirme için)
         nuc_final = cv2.resize(nuc_prob, (w_orig, h_orig))
         con_final = cv2.resize(con_prob, (w_orig, h_orig))
         
         return nuc_final, con_final, seg_confidence
 
-    def _find_target_layer(self):
-        # ResNet50'nin bilinen son conv katmanını ara
-        for layer in self.classifier.layers:
-            if 'resnet50' in layer.name: # Nested model varsa
-                try:
-                    return layer.get_layer('conv5_block3_out').output, layer.output
-                except:
-                    pass
-        # Düz modelse
-        try:
-            return self.classifier.get_layer('conv5_block3_out').output, self.classifier.output
-        except:
-            return None, None
-
     def generate_gradcam(self, img_tensor, class_idx):
-        """Generate Grad-CAM heatmap - Keras 3 compatible version for nested ResNet50."""
+        """EfficientNetV2 uyumlu Grad-CAM"""
         if self.classifier is None: 
             return np.zeros((224, 224))
         
         try:
-            print("Grad-CAM baslatiliyor...")
+            print("Grad-CAM başlatılıyor (EfficientNetV2)...")
             
-            # Model yapısını analiz et
-            print(f"Model katman sayisi: {len(self.classifier.layers)}")
+            # EfficientNetV2'nin son conv katmanını bulma mantığı
+            last_conv_layer = None
             
-            # ResNet50 base modelini bul (nested model olarak)
-            base_model = None
-            base_model_layer_idx = None
-            for idx, layer in enumerate(self.classifier.layers):
-                if 'resnet' in layer.name.lower():
-                    base_model = layer
-                    base_model_layer_idx = idx
-                    print(f"Base model bulundu: {layer.name} (index: {idx})")
+            # 1. Strateji: 'top_activation' veya 'top_conv' ara (Standart isimlendirme)
+            for layer in reversed(self.classifier.layers):
+                if 'top_activation' in layer.name or 'top_conv' in layer.name:
+                    last_conv_layer = layer
                     break
             
-            if base_model is not None:
-                # Nested model yapısı - ResNet50 bir Functional model olarak içeride
-                print("Nested model yapisi tespit edildi")
-                
-                # ResNet50'nin son conv katmanını bul
-                try:
-                    last_conv_layer = base_model.get_layer('conv5_block3_out')
-                    print(f"Son conv katmani: conv5_block3_out")
-                except Exception as e:
-                    print(f"conv5_block3_out bulunamadi: {e}")
-                    return self._activation_based_cam(img_tensor)
-                
-                # Yöntem: GradientTape ile manuel hesaplama
-                img_tf = tf.convert_to_tensor(img_tensor, dtype=tf.float32)
-                
-                # Feature extractor model - sadece conv output için
-                feature_extractor = tf.keras.Model(
-                    inputs=base_model.input,
-                    outputs=last_conv_layer.output
-                )
-                
-                print("Gradient hesaplaniyor (nested model)...")
-                
-                with tf.GradientTape(persistent=True) as tape:
-                    tape.watch(img_tf)
-                    
-                    # ResNet50'den feature map al
-                    conv_output = feature_extractor(img_tf, training=False)
-                    tape.watch(conv_output)
-                    
-                    # Tam model prediction
-                    predictions = self.classifier(img_tf, training=False)
-                    
-                    # Hedef sınıf skoru
-                    if class_idx < predictions.shape[-1]:
-                        class_score = predictions[0, class_idx]
-                    else:
-                        class_score = predictions[0, 0]
-                    
-                    print(f"Class score: {class_score.numpy():.4f}")
-                
-                # Gradient hesapla
-                grads = tape.gradient(class_score, conv_output)
-                del tape
-                
-                if grads is None:
-                    print("Gradient None - activation based CAM deneniyor...")
-                    return self._activation_based_cam(img_tensor)
-                
-                print(f"Gradient shape: {grads.shape}")
-                
-            else:
-                # Düz model yapısı
-                print("Duz model yapisi - dogrudan katman aranacak")
-                
-                # conv5_block3_out veya son Conv2D katmanını bul
-                last_conv_layer = None
-                try:
-                    last_conv_layer = self.classifier.get_layer('conv5_block3_out')
-                except:
-                    for layer in reversed(self.classifier.layers):
-                        if isinstance(layer, tf.keras.layers.Conv2D):
-                            last_conv_layer = layer
-                            break
-                
-                if last_conv_layer is None:
-                    print("Conv katmani bulunamadi")
-                    return self._activation_based_cam(img_tensor)
-                
-                print(f"Son conv katmani: {last_conv_layer.name}")
-                
-                # Grad model oluştur
-                grad_model = tf.keras.Model(
-                    inputs=self.classifier.input,
-                    outputs=[last_conv_layer.output, self.classifier.output]
-                )
-                
-                img_tf = tf.convert_to_tensor(img_tensor, dtype=tf.float32)
-                
-                print("Gradient hesaplaniyor (duz model)...")
-                
-                with tf.GradientTape() as tape:
-                    conv_output, predictions = grad_model(img_tf, training=False)
-                    
-                    if class_idx < predictions.shape[-1]:
-                        class_score = predictions[0, class_idx]
-                    else:
-                        class_score = predictions[0, 0]
-                
-                grads = tape.gradient(class_score, conv_output)
-                
-                if grads is None:
-                    print("Gradient None")
-                    return self._activation_based_cam(img_tensor)
+            # 2. Strateji: Bulunamazsa sondan başa doğru ilk 4D çıktı veren Conv katmanını bul
+            if last_conv_layer is None:
+                for layer in reversed(self.classifier.layers):
+                    if isinstance(layer, tf.keras.layers.Conv2D):
+                        last_conv_layer = layer
+                        break
+                        
+            # 3. Strateji: Base model varsa (Nested)
+            if last_conv_layer is None:
+                for layer in self.classifier.layers:
+                    if 'efficientnet' in layer.name.lower():
+                        # Base model içindeki son katmanı al
+                        # Bu kısım karmaşık olabilir, activation-based fallback'e düşmesi daha güvenli
+                        pass
+
+            if last_conv_layer is None:
+                print("Hedef katman bulunamadı, Activation CAM kullanılıyor.")
+                return self._activation_based_cam(img_tensor)
+
+            print(f"Hedef Katman: {last_conv_layer.name}")
+
+            # Grad Model
+            grad_model = tf.keras.Model(
+                inputs=self.classifier.input,
+                outputs=[last_conv_layer.output, self.classifier.output]
+            )
+
+            img_tf = tf.convert_to_tensor(img_tensor, dtype=tf.float32)
+
+            with tf.GradientTape() as tape:
+                conv_output, predictions = grad_model(img_tf, training=False)
+                if class_idx < predictions.shape[-1]:
+                    class_score = predictions[0, class_idx]
+                else:
+                    class_score = predictions[0, 0]
+
+            grads = tape.gradient(class_score, conv_output)
             
-            # Grad-CAM hesaplama
+            if grads is None:
+                return self._activation_based_cam(img_tensor)
+
             pooled_grads = tf.reduce_mean(grads, axis=(0, 1, 2))
             
             conv_output_np = conv_output[0].numpy()
             pooled_grads_np = pooled_grads.numpy()
             
-            print(f"Conv output shape: {conv_output_np.shape}")
-            print(f"Pooled grads shape: {pooled_grads_np.shape}")
-            
-            # Weighted sum
             heatmap = np.zeros(conv_output_np.shape[:2], dtype=np.float32)
             for i in range(len(pooled_grads_np)):
                 heatmap += pooled_grads_np[i] * conv_output_np[:, :, i]
             
-            # ReLU ve normalize
             heatmap = np.maximum(heatmap, 0)
             if np.max(heatmap) > 0:
                 heatmap = heatmap / np.max(heatmap)
-            
-            print(f"Heatmap shape: {heatmap.shape}, max: {np.max(heatmap):.4f}")
-            print("Grad-CAM basariyla olusturuldu.")
+                
             return heatmap
-            
+
         except Exception as e:
-            print(f"Grad-CAM Error: {e}")
-            import traceback
-            traceback.print_exc()
+            print(f"Grad-CAM Hatası: {e}")
             return self._activation_based_cam(img_tensor)
-    
+
     def _activation_based_cam(self, img_tensor):
-        """Fallback: Activation-based Class Activation Map (gradient gerektirmez)."""
+        """Fallback yöntem"""
         try:
-            print("Activation-based CAM kullaniliyor...")
-            
-            # ResNet50 base modelini bul
-            base_model = None
-            for layer in self.classifier.layers:
-                if 'resnet' in layer.name.lower():
-                    base_model = layer
+            # Son conv katmanını bul
+            last_conv = None
+            for layer in reversed(self.classifier.layers):
+                if isinstance(layer, tf.keras.layers.Conv2D) or 'top_activation' in layer.name:
+                    last_conv = layer
                     break
             
-            if base_model is not None:
-                # Nested model
-                try:
-                    last_conv = base_model.get_layer('conv5_block3_out')
-                except:
-                    # Son conv katmanını bul
-                    last_conv = None
-                    for layer in reversed(base_model.layers):
-                        if 'conv' in layer.name and hasattr(layer, 'output'):
-                            last_conv = layer
-                            break
-                
-                if last_conv is None:
-                    return np.zeros((224, 224))
-                
-                # Feature extractor
-                feature_model = tf.keras.Model(
-                    inputs=base_model.input,
-                    outputs=last_conv.output
-                )
-                features = feature_model(img_tensor, training=False)
-            else:
-                # Düz model - son Conv2D bul
-                last_conv = None
-                for layer in reversed(self.classifier.layers):
-                    if isinstance(layer, tf.keras.layers.Conv2D):
-                        last_conv = layer
-                        break
-                
-                if last_conv is None:
-                    return np.zeros((224, 224))
-                
-                feature_model = tf.keras.Model(
-                    inputs=self.classifier.input,
-                    outputs=last_conv.output
-                )
-                features = feature_model(img_tensor, training=False)
+            if last_conv is None: return np.zeros((224, 224))
             
-            # Aktivasyonların ortalamasını al
+            feature_model = tf.keras.Model(inputs=self.classifier.input, outputs=last_conv.output)
+            features = feature_model(img_tensor, training=False)
+            
             heatmap = tf.reduce_mean(features, axis=-1)[0].numpy()
             heatmap = np.maximum(heatmap, 0)
-            
             if np.max(heatmap) > 0:
                 heatmap = heatmap / np.max(heatmap)
-            
-            print(f"Activation CAM shape: {heatmap.shape}")
             return heatmap
-            
-        except Exception as e:
-            print(f"Activation CAM Error: {e}")
+        except:
             return np.zeros((224, 224))

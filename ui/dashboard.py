@@ -104,8 +104,8 @@ def render_classification_panel(img_rgb, diagnosis, cls_conf, seg_conf, gradcam_
         
         st.markdown("#### Güvenilirlik Metrikleri")
         c1, c2 = st.columns(2)
-        c1.metric("Teşhis Güveni", f"%{cls_conf*100:.1f}", help="ResNet50 modelinin sınıflandırma kesinliği.")
-        c2.metric("Segmentasyon Güveni", f"%{seg_conf*100:.1f}", help="CIA-Net modelinin hücre tespit kesinliği (Ortalama Piksel Olasılığı).")
+        c1.metric("Teşhis Güveni", f"%{cls_conf*100:.1f}", help="EfficientNetV2-S modelinin sınıflandırma kesinliği.")
+        c2.metric("Segmentasyon Güveni", f"%{seg_conf*100:.1f}", help="CIA-Net modelinin hücre tespit kesinliği.")
 
         if cls_conf < 0.70:
             st.warning("Düşük güven skoru. Lütfen manuel inceleme yapınız.")
