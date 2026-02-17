@@ -1,0 +1,62 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pathoai"
+version = "1.0.0"
+description = "Streamlit tabanlı histopatoloji görüntü analizi ve karar destek sistemi"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [
+    {name = "PathoAI Team", email = "team@pathoai.example.com"}
+]
+keywords = ["pathology", "ai", "medical-imaging", "deep-learning", "histopathology"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Healthcare Industry",
+    "Topic :: Scientific/Engineering :: Medical Science Apps.",
+    "Programming Language :: Python :: 3.10",
+]
+
+[project.urls]
+Homepage = "https://github.com/Woffluon/PathoAI"
+Repository = "https://github.com/Woffluon/PathoAI.git"
+Issues = "https://github.com/Woffluon/PathoAI/issues"
+
+[tool.black]
+line-length = 100
+target-version = ['py310']
+
+[tool.isort]
+profile = "black"
+line_length = 100
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["core*", "ui*"]
+
+[tool.black]
+line-length = 100
+target-version = ['py310']
+extend-exclude = '''
+/(
+  \.git
+  | \.venv
+  | build
+  | dist
+)/
+'''
+
+[tool.isort]
+profile = "black"
+line_length = 100
+skip_gitignore = true
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+ignore_missing_imports = true

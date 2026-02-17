@@ -1,0 +1,106 @@
+# Python cache files
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# Version control
+.git/
+.gitignore
+.gitattributes
+
+# IDE configurations
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Development containers (not needed in production)
+.devcontainer/
+
+# Test files (removed from project)
+tests/
+test_*.py
+*_test.py
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Documentation (except README.md)
+*.md
+docs/
+!README.md
+
+# Environment and log files
+.env
+.env.local
+.env.*.local
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+tmp/
+temp/
+
+# Development tools
+.pre-commit-config.yaml
+.flake8
+.pylintrc
+mypy.ini
+
+# Docker files (not needed inside container)
+Dockerfile
+docker-compose*.yml
+.dockerignore
+
+# Build artifacts
+*.pyc
+*.pyo
+*.pyd
+.Python
+build/
+develop-eggs/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# pyenv
+.python-version
+
+# Monitoring configs (copied separately if needed)
+prometheus.yml
+prometheus-alerts.yml
+grafana/
+
+# Scripts (not needed in production container)
+scripts/

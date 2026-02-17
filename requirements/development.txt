@@ -1,0 +1,222 @@
+alabaster==1.0.0
+    # via sphinx
+astroid==4.0.4
+    # via pylint
+babel==2.18.0
+    # via sphinx
+black==24.10.0
+    # via -r development.in
+boolean-py==5.0
+    # via license-expression
+build==1.4.0
+    # via pip-tools
+cachecontrol[filecache]==0.14.4
+    # via pip-audit
+certifi==2026.1.4
+    # via
+    #   -c base.txt
+    #   requests
+cfgv==3.5.0
+    # via pre-commit
+charset-normalizer==3.4.4
+    # via
+    #   -c base.txt
+    #   requests
+click==8.3.1
+    # via
+    #   -c base.txt
+    #   black
+    #   pip-tools
+colorama==0.4.6
+    # via
+    #   -c base.txt
+    #   build
+    #   click
+    #   pylint
+    #   sphinx
+cyclonedx-python-lib==7.6.2
+    # via pip-audit
+defusedxml==0.7.1
+    # via
+    #   -c base.txt
+    #   py-serializable
+dill==0.4.1
+    # via pylint
+distlib==0.4.0
+    # via virtualenv
+docutils==0.22.4
+    # via
+    #   sphinx
+    #   sphinx-rtd-theme
+filelock==3.24.0
+    # via
+    #   cachecontrol
+    #   virtualenv
+flake8==7.1.1
+    # via -r development.in
+html5lib==1.1
+    # via pip-audit
+identify==2.6.16
+    # via pre-commit
+idna==3.11
+    # via
+    #   -c base.txt
+    #   requests
+imagesize==1.4.1
+    # via sphinx
+isort==5.13.2
+    # via
+    #   -r development.in
+    #   pylint
+jinja2==3.1.6
+    # via
+    #   -c base.txt
+    #   sphinx
+license-expression==30.4.4
+    # via cyclonedx-python-lib
+markdown-it-py==4.0.0
+    # via
+    #   -c base.txt
+    #   rich
+markupsafe==3.0.3
+    # via
+    #   -c base.txt
+    #   jinja2
+mccabe==0.7.0
+    # via
+    #   flake8
+    #   pylint
+mdurl==0.1.2
+    # via
+    #   -c base.txt
+    #   markdown-it-py
+msgpack==1.1.2
+    # via cachecontrol
+mypy==1.14.1
+    # via -r development.in
+mypy-extensions==1.1.0
+    # via
+    #   black
+    #   mypy
+nodeenv==1.10.0
+    # via pre-commit
+packageurl-python==0.17.6
+    # via cyclonedx-python-lib
+packaging==26.0
+    # via
+    #   -c base.txt
+    #   black
+    #   build
+    #   pip-audit
+    #   pip-requirements-parser
+    #   sphinx
+    #   wheel
+pathspec==1.0.4
+    # via black
+pip-api==0.0.34
+    # via pip-audit
+pip-audit==2.7.3
+    # via -r development.in
+pip-requirements-parser==32.0.1
+    # via pip-audit
+pip-tools==7.4.1
+    # via -r development.in
+platformdirs==4.7.1
+    # via
+    #   black
+    #   pylint
+    #   virtualenv
+pre-commit==4.5.1
+    # via -r development.in
+py-serializable==1.1.2
+    # via cyclonedx-python-lib
+pycodestyle==2.12.1
+    # via flake8
+pyflakes==3.2.0
+    # via flake8
+pygments==2.19.2
+    # via
+    #   -c base.txt
+    #   rich
+    #   sphinx
+pylint==4.0.4
+    # via -r development.in
+pyparsing==3.3.2
+    # via
+    #   -c base.txt
+    #   pip-requirements-parser
+pyproject-hooks==1.2.0
+    # via
+    #   build
+    #   pip-tools
+pyyaml==6.0.3
+    # via
+    #   -c base.txt
+    #   pre-commit
+requests==2.32.5
+    # via
+    #   -c base.txt
+    #   cachecontrol
+    #   pip-audit
+    #   sphinx
+rich==14.3.2
+    # via
+    #   -c base.txt
+    #   pip-audit
+roman-numerals==4.1.0
+    # via sphinx
+six==1.17.0
+    # via
+    #   -c base.txt
+    #   html5lib
+snowballstemmer==3.0.1
+    # via sphinx
+sortedcontainers==2.4.0
+    # via cyclonedx-python-lib
+sphinx==9.0.4
+    # via
+    #   -r development.in
+    #   sphinx-rtd-theme
+    #   sphinxcontrib-jquery
+sphinx-rtd-theme==3.1.0
+    # via -r development.in
+sphinxcontrib-applehelp==2.0.0
+    # via sphinx
+sphinxcontrib-devhelp==2.0.0
+    # via sphinx
+sphinxcontrib-htmlhelp==2.1.0
+    # via sphinx
+sphinxcontrib-jquery==4.1
+    # via sphinx-rtd-theme
+sphinxcontrib-jsmath==1.0.1
+    # via sphinx
+sphinxcontrib-qthelp==2.0.0
+    # via sphinx
+sphinxcontrib-serializinghtml==2.0.0
+    # via sphinx
+toml==0.10.2
+    # via
+    #   -c base.txt
+    #   pip-audit
+tomlkit==0.14.0
+    # via pylint
+typing-extensions==4.15.0
+    # via
+    #   -c base.txt
+    #   mypy
+urllib3==2.6.3
+    # via
+    #   -c base.txt
+    #   requests
+virtualenv==20.36.1
+    # via pre-commit
+webencodings==0.5.1
+    # via html5lib
+wheel==0.46.3
+    # via
+    #   -c base.txt
+    #   pip-tools
+
+# The following packages are considered to be unsafe in a requirements file:
+# pip
+# setuptools

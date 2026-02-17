@@ -1,0 +1,18 @@
+# Core application dependencies with exact version pinning
+# Generated from requirements.txt with currently installed versions
+
+tensorflow==2.20.0
+numpy==2.4.2
+pandas==2.3.3
+opencv-python-headless==4.13.0.92
+matplotlib==3.10.8
+scikit-image==0.26.0
+scipy==1.17.0
+streamlit==1.54.0
+albumentations==2.0.8
+seaborn==0.13.2
+fpdf2==2.7.6
+requests==2.32.5
+psutil==6.1.1
+prometheus-client==0.21.1
+flask==3.1.0

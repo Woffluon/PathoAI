@@ -1,0 +1,16 @@
+# Development tools
+# This file contains development-specific dependencies
+-c base.txt
+
+pip-tools==7.4.1
+pip-audit==2.7.3
+black==24.10.0
+flake8==7.1.1
+mypy==1.14.1
+isort==5.13.2
+pylint
+pre-commit
+
+# Documentation
+sphinx>=7.0.0
+sphinx-rtd-theme>=2.0.0
